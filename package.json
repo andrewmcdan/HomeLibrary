@@ -1,0 +1,16 @@
+{
+  "name": "homelibrary",
+  "version": "1.0.0",
+  "description": "Home Library is a library management software for all your books!",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-isbn": "^1.6.1",
+    "openai": "^4.53.0"
+  }
+}
