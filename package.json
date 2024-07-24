@@ -22,6 +22,7 @@
     "winston": "^3.13.1"
   },
   "devDependencies": {
+    "@types/dotenv": "^8.2.0",
     "@types/node": "^20.14.11",
     "@types/node-isbn": "^1.6.4",
     "@types/pg": "^8.11.6",

@@ -2,6 +2,7 @@ import Logger from './logger.js';
 import pg from "pg";
 import fs from "fs";
 const { Client } = pg;
+import { Book, User, Collection } from './dBaseTypes.js';
 
 interface UUID {
     value: string;
@@ -131,26 +132,7 @@ const DBInit = async () => {
     }
 }
 
-class Book {
-    isbn: string;
-    title: string;
-    authors: string;
-    dewey_decimal: string;
-    classification: string;
-    owner_id: UUID;
-    collection_id: UUID;
-    extra_info: Record<string, any>;
-    constructor(isbn: string, title: string, authors: string, dewey_decimal: string, classification: string, owner_id: UUID, collection_id: UUID, extra_info: Record<string, any>) {
-        this.isbn = isbn;
-        this.title = title;
-        this.authors = authors;
-        this.dewey_decimal = dewey_decimal;
-        this.classification = classification;
-        this.owner_id = owner_id;
-        this.collection_id = collection_id;
-        this.extra_info = extra_info;
-    }
-}
+
 
 const Books_table = {
     insert: async (book: Book) => {
@@ -187,18 +169,7 @@ const Books_table = {
     // TODO: delete by title, author, dewey_decimal, classification, owner_id, collection_id, extra_info
 };
 
-class User{
-    username: string;
-    email: string;
-    password: string;
-    extra_info: Record<string, any>;
-    constructor(username: string, email: string, password: string, extra_info: Record<string, any> = {}) {
-        this.username = username;
-        this.email = email;
-        this.password = password;
-        this.extra_info = extra_info
-    }
-}
+
 
 const Users_table = {
     insert: async (user: User) => {
@@ -239,18 +210,7 @@ const Users_table = {
     }
 };
 
-class Collection{
-    name: string;
-    owner_id: UUID;
-    description: string;
-    extra_info: Record<string, any>;
-    constructor(name: string, owner_id: UUID, description: string = '', extra_info: Record<string, any> = {}) {
-        this.name = name;
-        this.owner_id = owner_id;
-        this.description = description;
-        this.extra_info = extra_info
-    }
-}
+
 
 const Collections_table = {
     insert: async (collection: Collection) => {
@@ -284,5 +244,5 @@ const DBEnd = async () => {
     await dbClient.end();
 }
 
-const dataBase = { DBInit, Books_table, Book, DBEnd, Users_table, User, Collections_table, Collection };
+const dataBase = { DBInit, Books_table, DBEnd, Users_table, Collections_table };
 export default dataBase;

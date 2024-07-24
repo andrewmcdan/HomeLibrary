@@ -2,6 +2,7 @@ import Logger from './logger.js';
 import isbn from 'node-isbn';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
+import { Book, User, Collection } from './dBaseTypes.js';
 dotenv.config();
 
 import dataBase from './database.js';
@@ -56,66 +57,29 @@ async function main() {
     // find the classification in the object
     bookOut.classification = classification['Specific Classification']['Classification_Description'];
     bookOut.isbn = '978-1886439399';
-    console.log('creating user');
+    logger.log('creating user', 'info');
     await dataBase.DBInit();
-    const newUser = new dataBase.User('Andrew', 'andrewmcdan@gmail.com', 'd479');
-    let userInserted = false;
+    const newUser = new User('Andrew', 'andrewmcdan@gmail.com', 'd479');
+    let userUUID: UUID;
+    let newCollection: Collection;
+    let collection_id: UUID;
     dataBase.Users_table.insert(newUser).then((res) => {
         console.log('User inserted into database');
-        userInserted = true;
-    }).catch((err:any) => {
-        console.error('Error inserting user into database', err);
-        userInserted = true;
-    });
-
-    console.log('waiting for user to be inserted');
-    while (!userInserted) {
-        await waitSeconds(1);
-    }
-    console.log('searching for user Andrew');
-    let userUUID: UUID = { value: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' };
-    dataBase.Users_table.search_username('Andrew').then((res:any) => {
+        return dataBase.Users_table.search_username('Andrew');
+    }).then((res:any) => {
         userUUID = { value: res.rows[0].id };
-    }).catch((err:any) => {
-        console.error('Error searching for user Andrew', err);
-    });
-    console.log('waiting for user to be found');
-    while (userUUID.value === 'f47ac10b-58cc-4372-a567-0e02b2c3d479') {
-        await waitSeconds(1);
-    }
-    console.log('creating collection');
-    const newCollection = new dataBase.Collection('Andrews Collection', userUUID);
-    let collectionInserted = false;
-    dataBase.Collections_table.insert(newCollection).then((res:any) => {
-        console.log('Collection inserted into database');
-        collectionInserted = true;
-    }).catch((err:any) => {
-        console.error('Error inserting collection into database', err);
-        collectionInserted = true;
-    });
-    console.log('waiting for collection to be inserted');
-    while (!collectionInserted) {
-        await waitSeconds(1);
-    }
-    console.log('searching for collection');
-    let collection_id: UUID = { value: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' };
-    dataBase.Collections_table.search_name('Andrews Collection').then((res:any) => {
+        return dataBase.Collections_table.insert(newCollection);
+    }).then(() => {
+        return dataBase.Collections_table.search_name('Andrews Collection');
+    }).then((res:any) => {
         collection_id = { value: res.rows[0].id };
+        const newBook = new Book(bookOut.isbn, bookOut.title, bookOut.authors.join(', '), '181.112', JSON.stringify(bookOut.classification), userUUID, collection_id, classification);
+        return dataBase.Books_table.insert(newBook);
+    }).then(() => {
+        logger.log('All data inserted into database', 'info');
     }).catch((err:any) => {
-        console.error('Error searching for collection', err);
-    });
-
-    console.log('waiting for collection to be found');
-    while (collection_id.value === 'f47ac10b-58cc-4372-a567-0e02b2c3d479') {
-        await waitSeconds(1);
-    }
-    console.log('creating book');
-    
-    const newBook = new dataBase.Book(bookOut.isbn, bookOut.title, bookOut.authors.join(', '), '181.112', JSON.stringify(bookOut.classification), userUUID, collection_id, classification);
-    dataBase.Books_table.insert(newBook).then((res:any) => {
-        console.log('Book inserted into database');
-    }).catch((err:any) => {
-        console.error('Error inserting book into database', err);
+        logger.log('Error inserting data into database', 'error');
+        logger.log(err, 'error');
     }).finally(async() => {
         await dataBase.DBEnd();
     });
