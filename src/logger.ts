@@ -7,27 +7,27 @@ const { combine, timestamp, label, printf } = winston.format;
 
 const myFormat = printf(({ level, message }) => {
     let timestamp = new Date().toISOString();
-    if(level === 'error'){
+    if (level === 'error') {
         return chalk.red(`${timestamp} ${level}: ${message}`);
     }
-    if(level === 'warn'){
+    if (level === 'warn') {
         return chalk.yellow(`${timestamp} ${level}: ${message}`);
     }
-    if(level === 'info'){
+    if (level === 'info') {
         return chalk.blue(`${timestamp} ${level}: ${message}`);
     }
-    if(level === 'verbose'){
+    if (level === 'verbose') {
         return chalk.green(`${timestamp} ${level}: ${message}`);
     }
-    if(level === 'debug'){
+    if (level === 'debug') {
         return chalk.cyan(`${timestamp} ${level}: ${message}`);
     }
-    if(level === 'silly'){
+    if (level === 'silly') {
         return chalk.magenta(`${timestamp} ${level}: ${message}`);
-    }else{
+    } else {
         return `${timestamp} ${level}: ${message}`;
     }
-  });
+});
 
 class Logger {
     con: boolean;
@@ -35,7 +35,7 @@ class Logger {
     static initdone: boolean = false;
     constructor(con = true, level = 'info') {
         this.con = con;
-        if(!Logger.initdone){
+        if (!Logger.initdone) {
             Logger.winston = winston.createLogger({
                 level: level,
                 format: winston.format.json(),
@@ -53,27 +53,27 @@ class Logger {
             Logger.initdone = true;
         }
     }
-    
+
     log(message: string, level: string = 'info') {
         // use throw new Error() to get the stack trace
         let lineNumberInfo = '';
-        try{
+        try {
             throw new Error();
-        }catch(e:any){
+        } catch (e: any) {
             const stack = e.stack;
             const stackArr = stack.split('\n');
             // find the second line that contains the word 'at'
             let i = 0;
-            while(i < stackArr.length && !stackArr[i].includes('at')){
+            while (i < stackArr.length && !stackArr[i].includes('at')) {
                 i++;
             }
             i++;
-            if(i < stackArr.length){
+            if (i < stackArr.length) {
                 lineNumberInfo = stackArr[i];
             }
-            if(lineNumberInfo.indexOf('/') !== -1){
+            if (lineNumberInfo.indexOf('/') !== -1) {
                 lineNumberInfo = lineNumberInfo.substring(lineNumberInfo.lastIndexOf('/') + 1);
-            }else if(lineNumberInfo.indexOf('\\') !== -1){
+            } else if (lineNumberInfo.indexOf('\\') !== -1) {
                 lineNumberInfo = lineNumberInfo.substring(lineNumberInfo.lastIndexOf('\\') + 1);
             }
             lineNumberInfo = lineNumberInfo.substring(0, lineNumberInfo.indexOf(')'));
