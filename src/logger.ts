@@ -76,7 +76,9 @@ class Logger {
             } else if (lineNumberInfo.indexOf('\\') !== -1) {
                 lineNumberInfo = lineNumberInfo.substring(lineNumberInfo.lastIndexOf('\\') + 1);
             }
-            lineNumberInfo = lineNumberInfo.substring(0, lineNumberInfo.indexOf(')'));
+            if(lineNumberInfo.indexOf(')') !== -1){
+                lineNumberInfo = lineNumberInfo.substring(0, lineNumberInfo.indexOf(')'));
+            }
         }
         message = lineNumberInfo + ' - ' + message;
         Logger.winston.log({
