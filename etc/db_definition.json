@@ -17,7 +17,7 @@
   "Collections": {
     "columns": {
       "id": "UUID PRIMARY KEY DEFAULT uuid_generate_v4()",
-      "name": "VARCHAR(255) NOT NULL",
+      "name": "VARCHAR(255) NOT NULL UNIQUE",
       "description": "VARCHAR(255)",
       "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
       "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
@@ -41,13 +41,15 @@
       "authors": "VARCHAR NOT NULL",
       "isbn9": "VARCHAR UNIQUE",
       "isbn13": "VARCHAR UNIQUE",
-      "dewey_decimal": "VARCHAR",
+      "dewey_decimal": "NUMERIC(6, 3)",
       "classification": "JSONB",
       "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
       "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
       "owner_id": "UUID NOT NULL",
       "collection_id": "UUID NOT NULL",
-      "extra_info": "JSONB"
+      "extra_info": "JSONB",
+      "thumbnail_local": "VARCHAR",
+      "thumbnail_url": "VARCHAR"
     },
     "indexes": [
       "title",

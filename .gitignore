@@ -4,4 +4,6 @@ package-lock.json
 .vscode
 *.js
 *.log
-tsconfig.tsbuildinfo
+*.map
+*.tsbuildinfo
+js_output

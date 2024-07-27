@@ -8,22 +8,22 @@ const { combine, timestamp, label, printf } = winston.format;
 const myFormat = printf(({ level, message }) => {
     let timestamp = new Date().toISOString();
     if (level === 'error') {
-        return chalk.red(`${timestamp} ${level}: ${message}`);
+        return chalk.redBright(`${timestamp} ${level}: ${message}`);
     }
     if (level === 'warn') {
-        return chalk.yellow(`${timestamp} ${level}: ${message}`);
+        return chalk.yellowBright(`${timestamp} ${level}: ${message}`);
     }
     if (level === 'info') {
-        return chalk.blue(`${timestamp} ${level}: ${message}`);
+        return chalk.whiteBright(`${timestamp} ${level}: ${message}`);
     }
     if (level === 'verbose') {
-        return chalk.green(`${timestamp} ${level}: ${message}`);
+        return chalk.greenBright(`${timestamp} ${level}: ${message}`);
     }
     if (level === 'debug') {
-        return chalk.cyan(`${timestamp} ${level}: ${message}`);
+        return chalk.blueBright(`${timestamp} ${level}: ${message}`);
     }
     if (level === 'silly') {
-        return chalk.magenta(`${timestamp} ${level}: ${message}`);
+        return chalk.magentaBright(`${timestamp} ${level}: ${message}`);
     } else {
         return `${timestamp} ${level}: ${message}`;
     }
@@ -33,6 +33,7 @@ class Logger {
     con: boolean;
     static winston: any;
     static initdone: boolean = false;
+    static ignoreLines: string[] = [];
     constructor(con = true, level = 'info') {
         this.con = con;
         if (!Logger.initdone) {
@@ -64,10 +65,9 @@ class Logger {
             const stackArr = stack.split('\n');
             // find the second line that contains the word 'at'
             let i = 0;
-            while (i < stackArr.length && !stackArr[i].includes('at')) {
+            while ((i < stackArr.length && !stackArr[i].includes('at') || stackArr[i]?.includes('logger.ts'))) {
                 i++;
             }
-            i++;
             if (i < stackArr.length) {
                 lineNumberInfo = stackArr[i];
             }

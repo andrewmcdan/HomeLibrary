@@ -1,87 +1,134 @@
+import 'source-map-support/register.js';
 import Logger from './logger.js';
 import isbn from 'node-isbn';
-import OpenAI from 'openai';
 import dotenv from 'dotenv';
-import { Book, User, Collection } from './dBaseTypes.js';
 dotenv.config();
-
+import { Book, User, Collection } from './dBaseTypes.js';
 import dataBase from './database.js';
+import AI from './ai.js';
+import axios from 'axios';
+import fs from 'fs';
+import ddc from './ddc.js';
 
 const logger = new Logger(true, 'silly');
+const dewey = new ddc();
 
-let bookOut: any = null;
+let bookOut: Book = new Book('', '', '', '', '', { value: '' }, { value: '' }, {});
+let bookValid: boolean = false;
 interface UUID {
     value: string;
 }
-isbn.resolve('978-1886439399').then(function (book: any) {
-    console.log('Book found:');
-    
-    console.log(JSON.stringify(book, null, 2));
-    bookOut = book;
+isbn.resolve('978-0865718180').then(function (book: any) {
+    logger.log('Book found:');
+    logger.log(JSON.stringify(book, null, 2));
+    bookOut.authors = book.authors.join(';');
+    bookOut.isbn = "978-0865718180";
+    bookOut.extra_info = book;
+    bookOut.title = book.title;
+    if(book.imageLinks?.thumbnail){
+        bookOut.thumbnail = book.imageLinks.thumbnail.replace('-S.jpg', '.jpg');
+    }
+    // download the thumbnail
+    axios({
+        method: 'get',
+        url: bookOut.thumbnail,
+        responseType: 'stream'
+    }).then(function (response: any) {
+        // get the working directory
+        let path = process.cwd();
+        if(!path.includes('js_output')){
+            path += '/js_output';
+        }
+        path = path + '/thumbs/thumbnail-'+ bookOut.thumbnail_url.substring(bookOut.thumbnail_url.lastIndexOf('/') + 1)
+        response.data.pipe(fs.createWriteStream(path, { flags: 'w' }));
+        bookOut.thumbnail = path;
+        console.log({bookOut});
+        bookValid = true;
+    });
+    logger.log('Book out:');
+    logger.log(JSON.stringify(bookOut, null, 2));
 }).catch(function (err: any) {
-    console.log('Book not found', err);
+    logger.log('Book not found', err);
 });
 
-const client = new OpenAI({
-});
-
-const exampleText = `The Dewey Decimal Classification for "The Analects of Confucius" by Confucius would be 181.112, which falls under the category of "Philosophy of the East."
-
-Here is the breakdown of the classification in JSON format:
-
-{
-  "Main Category": "100 Philosophy and psychology",
-  "Specific Subcategory": {
-    "Subcategory Number": "181",
-    "Subcategory Description": "Eastern philosophy"
-  },
-  "Specific Classification": {
-    "Classification Number": "181.112",
-    "Classification Description": "Confucianism"
-  }
-}`;
+const client = new AI();
 
 async function main() {
-    while (bookOut === null) {
+    while(!bookValid) {
         await waitSeconds(1);
     }
-    const chatCompletion = await client.chat.completions.create({
-        messages: [{ role: 'user', content: 'how would you classify "'+ bookOut.title +'" by '+ bookOut.authors[0] +' using dewery decimal? can you provide a detailed breakdown of the classification with as much precision as possible and also in JSON format? for example ' + exampleText }],
-        model: 'gpt-3.5-turbo',
-    });
-    console.log(chatCompletion.choices[0].message.content);
+    const book1 = await client.classifyBook_Open(bookOut);
 
-    // extract the JSON from the completion
-    const mes = chatCompletion.choices[0].message.content as string;
-    const classification = JSON.parse(mes.substring(mes.indexOf('{'), mes.lastIndexOf('}') + 1));
-    // find the classification in the object
-    bookOut.classification = classification['Specific Classification']['Classification_Description'];
-    bookOut.isbn = '978-1886439399';
     logger.log('creating user', 'info');
     await dataBase.DBInit();
     const newUser = new User('Andrew', 'andrewmcdan@gmail.com', 'd479');
     let userUUID: UUID;
     let newCollection: Collection;
     let collection_id: UUID;
-    dataBase.Users_table.insert(newUser).then((res) => {
-        console.log('User inserted into database');
+    dataBase.Users_table.insert(newUser).then((res:any) => {
+        if(res.success === true)
+            logger.log('User inserted into database', 'info');
+        else if(res.success === false && res.error === 'User already exists')
+            logger.log('User already exists in database', 'info');
+        else
+            logger.log('Error inserting user into database: ' + res.error, 'error');
         return dataBase.Users_table.search_username('Andrew');
     }).then((res:any) => {
         userUUID = { value: res.rows[0].id };
+        newCollection = new Collection('Andrews Collection', userUUID, 'A collection of books that I own', {'test': 'this is a test collection', 'test2': ['val1', 'val2']});
         return dataBase.Collections_table.insert(newCollection);
-    }).then(() => {
+    }).then((res:any) => {
+        if(res.success === true)
+            logger.log('Collection inserted into database', 'info');
+        else if(res.success === false && res.error === 'Collection already exists')
+            logger.log('Collection already exists in database', 'info');
+        else
+            logger.log('Error inserting collection into database: ' + res.error, 'error');
         return dataBase.Collections_table.search_name('Andrews Collection');
     }).then((res:any) => {
         collection_id = { value: res.rows[0].id };
-        const newBook = new Book(bookOut.isbn, bookOut.title, bookOut.authors.join(', '), '181.112', JSON.stringify(bookOut.classification), userUUID, collection_id, classification);
+        const newBook = new Book(book1.isbn, book1.title, book1.authors, book1.dewey_decimal, JSON.stringify(book1.classification), userUUID, collection_id, book1);
+        newBook.thumbnail_local = bookOut.thumbnail_local;
+        newBook.thumbnail_url = bookOut.thumbnail_url;
         return dataBase.Books_table.insert(newBook);
-    }).then(() => {
-        logger.log('All data inserted into database', 'info');
+    }).then((res:any) => {
+        if(res.success === true)
+            logger.log('Book inserted into database', 'info');
+        else if(res.success === false && res.error === 'ISBN already exists')
+            logger.log('Book already exists in database', 'info');
+        else
+            logger.log('Error inserting book into database: ' + res.error, 'error');
     }).catch((err:any) => {
         logger.log('Error inserting data into database', 'error');
         logger.log(err, 'error');
     }).finally(async() => {
+        logger.log('All database operations complete. Closing database.', 'info');
         await dataBase.DBEnd();
+    });
+    dewey.getClassificationDetails("6xx").then((dewey:any) => {
+        console.log({dewey});
+    }).catch((err:any) => {
+        console.log(err);
+    });
+    dewey.getClassificationDetails("64x").then((dewey:any) => {
+        console.log({dewey});
+    }).catch((err:any) => {
+        console.log(err);
+    });
+    dewey.getClassificationDetails("641").then((dewey:any) => {
+        console.log({dewey});
+    }).catch((err:any) => {
+        console.log(err);
+    });
+    dewey.getClassificationDetails("641.2").then((dewey:any) => {
+        console.log({dewey});
+    }).catch((err:any) => {
+        console.log(err);
+    });
+    dewey.getClassificationDetails("641.25").then((dewey:any) => {
+        console.log({dewey});
+    }).catch((err:any) => {
+        console.log(err);
     });
 }
 

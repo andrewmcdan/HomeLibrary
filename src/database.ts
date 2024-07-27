@@ -21,10 +21,23 @@ const dbClient = new Client({
 class DBError extends Error {
     // static number of errors
     static count: number = 0;
+    message: string;
     constructor(message: string) {
+        if(
+        message.includes('constraint "fk_collections_owner_id" for relation "collections" already exists') ||
+        message.includes('constraint "fk_books_owner_id" for relation "books" already exists') ||
+        message.includes('constraint "fk_books_collection_id" for relation "books" already exists') ||
+        message.includes('constraint "fk_users_owner_id" for relation "users" already exists')
+        ){
+            super();
+            this.message = "NOT AN ERROR";
+            logger.log(`DBError (${DBError.count}): ${message}`, 'info');
+            return;
+        }
         DBError.count++;
         super();
         this.name = "DB_Error";
+        this.message = message;
         logger.log(`DBError (${DBError.count}): ${message}`, 'error');
     }
 }
@@ -128,7 +141,11 @@ const DBInit = async () => {
         await Promise.all(waiters);
         logger.log('Tables, columns, indexes, and foreign keys checked and created if not exist.', 'info');
     } catch (err) {
-        logger.log('Error creating tables, columns, indexes, or foreign keys', 'error');
+        if(err instanceof DBError && err.message === "NOT AN ERROR"){
+            logger.log('Tables, columns, indexes, and foreign keys checked and created if not exist.', 'info');
+        } else {
+            logger.log('Error creating tables, columns, indexes, or foreign keys', 'error');
+        }
     }
 }
 
@@ -138,12 +155,31 @@ const Books_table = {
     insert: async (book: Book) => {
         let query = '';
         if (book.isbn.length === 13 || book.isbn.length === 14) {
-            query = `INSERT INTO books (isbn13, title, authors, dewey_decimal, classification, owner_id, collection_id, extra_info) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+            query = `INSERT INTO books (isbn13, title, authors, dewey_decimal, classification, owner_id, collection_id, extra_info, thumbnail_local, thumbnail_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
         } else {
-            query = `INSERT INTO books (isbn9, title, authors, dewey_decimal, classification, owner_id, collection_id, extra_info) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+            query = `INSERT INTO books (isbn9, title, authors, dewey_decimal, classification, owner_id, collection_id, extra_info, thumbnail_local, thumbnail_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`;
         }
-        const values = [book.isbn, book.title, book.authors, book.dewey_decimal, JSON.stringify(book.classification), book.owner_id.value, book.collection_id.value, JSON.stringify(book.extra_info)];
-        return DbQueryWithParams(query, values);
+        const values = [book.isbn, book.title, book.authors, book.dewey_decimal, JSON.stringify(book.classification), book.owner_id.value, book.collection_id.value, JSON.stringify(book.extra_info), book.thumbnail_local, book.thumbnail_url];
+        // define retval as a type that has a success property, an error property, and a data property
+        let retVal: { success: boolean, error: string, data: any } = { success: false, error: '', data: null };
+        return new Promise((resolve, reject) => {
+            DbQueryWithParams(query, values).then((res) => {
+                retVal.data = res;
+                retVal.success = true;
+                resolve(retVal);
+            }).catch((err) => {
+                // parse the error to see if the error is of known type
+                if (err.message.includes('duplicate key value violates unique constraint "books_isbn13_key"') || err.message.includes('duplicate key value violates unique constraint "books_isbn9_key"')) {
+                    retVal.error = 'ISBN already exists';
+                    retVal.success = false;
+                    resolve(retVal);
+                } else {
+                    retVal.error = err.message;
+                    retVal.success = false;
+                    reject(retVal);
+                }
+            });
+        });
     },
     search_isbn: async (isbn: string) => {
         const query = `SELECT * FROM books WHERE isbn = $1`;
@@ -175,12 +211,28 @@ const Users_table = {
     insert: async (user: User) => {
         const query = `INSERT INTO users (username, email, password) VALUES ($1, $2, $3)`;
         const values = [user.username, user.email, user.password];
-        return DbQueryWithParams(query, values);
+        let retVal: { success: boolean, error: string, data: any } = { success: false, error: '', data: null };
+        return new Promise((resolve, reject) => {
+            DbQueryWithParams(query, values).then((res) => {
+                retVal.data = res;
+                retVal.success = true;
+                resolve(retVal);
+            }).catch((err) => {
+                if (err.message.includes('duplicate key value violates unique constraint "users_username_key"')) {
+                    retVal.error = 'User already exists';
+                    retVal.success = false;
+                    resolve(retVal);
+                } else {
+                    retVal.error = err.message;
+                    retVal.success = false;
+                    reject(retVal);
+                }
+            });
+        });
     },
     search_username: async (username: string) => {
         const query = `SELECT * FROM users WHERE username = $1`;
         const values = [username];
-        console.log('search_username query:', query, 'values:', values);
         return DbQueryWithParams(query, values);
     },
     search_email: async (email: string) => {
@@ -216,7 +268,24 @@ const Collections_table = {
     insert: async (collection: Collection) => {
         const query = `INSERT INTO collections (name, owner_id, description, extra_info) VALUES ($1, $2, $3, $4)`;
         const values = [collection.name, collection.owner_id.value, collection.description, JSON.stringify(collection.extra_info)];
-        return DbQueryWithParams(query, values);
+        let retVal: { success: boolean, error: string, data: any } = { success: false, error: '', data: null };
+        return new Promise((resolve, reject) => {
+            DbQueryWithParams(query, values).then((res) => {
+                retVal.data = res;
+                retVal.success = true;
+                resolve(retVal);
+            }).catch((err) => {
+                if (err.message.includes('duplicate key value violates unique constraint "collections_name_key"')) {
+                    retVal.error = 'Collection already exists';
+                    retVal.success = false;
+                    resolve(retVal);
+                } else {
+                    retVal.error = err.message;
+                    retVal.success = false;
+                    reject(retVal);
+                }
+            });
+        });
     },
     search_name: async (name: string) => {
         const query = `SELECT * FROM collections WHERE name = $1`;
