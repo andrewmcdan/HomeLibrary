@@ -8,24 +8,24 @@ const { combine, timestamp, label, printf } = winston.format;
 const myFormat = printf(({ level, message }) => {
     let timestamp = new Date().toISOString();
     if (level === 'error') {
-        return chalk.redBright(`${timestamp} ${level}: ${message}`);
+        return chalk.redBright(`[${timestamp}] [${level.toUpperCase()}] ${message}`);
     }
     if (level === 'warn') {
-        return chalk.yellowBright(`${timestamp} ${level}: ${message}`);
+        return chalk.yellowBright(`[${timestamp}] [${level.toUpperCase()}] ${message}`);
     }
     if (level === 'info') {
-        return chalk.whiteBright(`${timestamp} ${level}: ${message}`);
+        return chalk.whiteBright(`[${timestamp}] [${level.toUpperCase()}] ${message}`);
     }
     if (level === 'verbose') {
-        return chalk.greenBright(`${timestamp} ${level}: ${message}`);
+        return chalk.greenBright(`[${timestamp}] [${level.toUpperCase()}] ${message}`);
     }
     if (level === 'debug') {
-        return chalk.blueBright(`${timestamp} ${level}: ${message}`);
+        return chalk.blueBright(`[${timestamp}] [${level.toUpperCase()}] ${message}`);
     }
     if (level === 'silly') {
-        return chalk.magentaBright(`${timestamp} ${level}: ${message}`);
+        return chalk.magentaBright(`[${timestamp}] [${level.toUpperCase()}] ${message}`);
     } else {
-        return `${timestamp} ${level}: ${message}`;
+        return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
     }
 });
 

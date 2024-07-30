@@ -42,7 +42,7 @@ isbn.resolve('978-0865718180').then(function (book: any) {
         path = path + '/thumbs/thumbnail-'+ bookOut.thumbnail_url.substring(bookOut.thumbnail_url.lastIndexOf('/') + 1)
         response.data.pipe(fs.createWriteStream(path, { flags: 'w' }));
         bookOut.thumbnail = path;
-        console.log({bookOut});
+        logger.log(JSON.stringify({bookOut}, null,2));
         bookValid = true;
     });
     logger.log('Book out:');
@@ -106,29 +106,39 @@ async function main() {
         await dataBase.DBEnd();
     });
     dewey.getClassificationDetails("6xx").then((dewey:any) => {
-        console.log({dewey});
+        logger.log(JSON.stringify({"id":1, dewey}, null,2).substring(0,500));
     }).catch((err:any) => {
-        console.log(err);
+        logger.log(err);
     });
     dewey.getClassificationDetails("64x").then((dewey:any) => {
-        console.log({dewey});
+        logger.log(JSON.stringify({"id":2, dewey}, null,2).substring(0,500));
     }).catch((err:any) => {
-        console.log(err);
+        logger.log(err);
     });
     dewey.getClassificationDetails("641").then((dewey:any) => {
-        console.log({dewey});
+        logger.log(JSON.stringify({"id":3, dewey}, null,2).substring(0,500));
     }).catch((err:any) => {
-        console.log(err);
+        logger.log(err);
     });
     dewey.getClassificationDetails("641.2").then((dewey:any) => {
-        console.log({dewey});
+        logger.log(JSON.stringify({"id":4, dewey}, null,2).substring(0,500));
     }).catch((err:any) => {
-        console.log(err);
+        logger.log(err);
     });
-    dewey.getClassificationDetails("641.25").then((dewey:any) => {
-        console.log({dewey});
+    // dewey.getClassificationDetails("641.25").then((dewey:any) => {
+    //     logger.log({"id":5, dewey});
+    // }).catch((err:any) => {
+    //     logger.log(err);
+    // });
+    dewey.updateIndex("641.25", "Carbonated Drinks").then((res:any) => {
+        logger.log(JSON.stringify({"id":7, res}, null,2));
+        dewey.getClassificationDetails("641.25").then((dewey:any) => {
+            logger.log(JSON.stringify({"id":6, dewey}, null,2));
+        }).catch((err:any) => {
+            logger.log(err);
+        });
     }).catch((err:any) => {
-        console.log(err);
+        logger.log(err);
     });
 }
 
