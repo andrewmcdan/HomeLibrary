@@ -1,12 +1,11 @@
 // TODO: move all openai related code here
-import Logger from './logger.js';
-import OpenAI from 'openai';
-import dotenv from 'dotenv';
+import Logger from "./logger.js";
+import OpenAI from "openai";
+import dotenv from "dotenv";
 dotenv.config();
-import { Book, User, Collection } from './dBaseTypes.js';
+import { Book, User, Collection } from "./dBaseTypes.js";
 
 const logger = new Logger(true, process.env.LOG_LEVEL);
-
 
 const exampleText1 = `The Dewey Decimal Classification for "Mastering Basic Cheesemaking" by Gianaclis Caldwell would be 641.36, which falls under the category of "Home Economics: Food and Drink: Dairy products, Cheesemaking."
 Here is the breakdown of the classification in JSON format:
@@ -41,29 +40,42 @@ class AI {
 
     async classifyBook_Open(book: Book) {
         const chatCompletion = await AI.client.chat.completions.create({
-            messages: [{ role: 'user', content: 'how would you classify "' + book.title + '" by ' + book.authors[0] + ' using dewey decimal? can you provide a detailed breakdown of the classification with as much precision as possible and also in JSON format? for example ' + exampleText1 }],
+            messages: [
+                {
+                    role: "user",
+                    content:
+                        'how would you classify "' +
+                        book.title +
+                        '" by ' +
+                        book.authors[0] +
+                        " using dewey decimal? can you provide a detailed breakdown of the classification with as much precision as possible and also in JSON format? for example " +
+                        exampleText1,
+                },
+            ],
             model: process.env.GPT_MODEL as string,
         });
-        logger.log(chatCompletion.choices[0].message.content as string, 'info');
+        logger.log(chatCompletion.choices[0].message.content as string, "info");
 
         // extract the JSON from the completion
         const mes = chatCompletion.choices[0].message.content as string;
         let classification = {} as any;
         try {
-            classification = JSON.parse(mes.substring(mes.indexOf('{'), mes.lastIndexOf('}') + 1));
+            classification = JSON.parse(
+                mes.substring(mes.indexOf("{"), mes.lastIndexOf("}") + 1)
+            );
         } catch (e) {
-            logger.log('Error parsing JSON from completion', 'error');
-            logger.log('Error: ' + e, 'error');
+            logger.log("Error parsing JSON from completion", "error");
+            logger.log("Error: " + e, "error");
         }
         // find the classification in the object
         book.classification = classification;
         // walk through the classification object and find the dewey decimal with the most specificity
-        let dewey = '';
-        for(const key in classification){
-            for(const subkey in classification[key]){
-                if(subkey.includes('Number')){
+        let dewey = "";
+        for (const key in classification) {
+            for (const subkey in classification[key]) {
+                if (subkey.includes("Number")) {
                     let newDewey = classification[key][subkey];
-                    if(newDewey.length > dewey.length){
+                    if (newDewey.length > dewey.length) {
                         dewey = newDewey;
                     }
                 }
@@ -74,41 +86,61 @@ class AI {
     }
 
     async classifyBook_Index(book: Book, classes: string[]) {
-        const message = exampleText2 + book.title + ' by ' + book.authors.split(';').join(', ') + '\n\nOptions:\n\n' + classes.join('\n') + '\n\n' + exampleText4.replace('xxxxx', classes[0]);
+        const message =
+            exampleText2 +
+            book.title +
+            " by " +
+            book.authors.split(";").join(", ") +
+            "\n\nOptions:\n\n" +
+            classes.join("\n") +
+            "\n\n" +
+            exampleText4.replace("xxxxx", classes[0]);
         const chatCompletion = await AI.client.chat.completions.create({
-            messages: [{ role: 'user', content: message }],
+            messages: [{ role: "user", content: message }],
             model: process.env.GPT_MODEL as string,
         });
-        logger.log(chatCompletion.choices[0].message.content as string, 'info');
+        logger.log(chatCompletion.choices[0].message.content as string, "info");
 
         // extract the JSON from the completion
         const mes = chatCompletion.choices[0].message.content as string;
         let classification = {} as any;
         try {
-            classification = JSON.parse(mes.substring(mes.indexOf('{'), mes.lastIndexOf('}') + 1));
+            classification = JSON.parse(
+                mes.substring(mes.indexOf("{"), mes.lastIndexOf("}") + 1)
+            );
         } catch (e) {
-            logger.log('Error parsing JSON from completion', 'error');
-            logger.log('Error: ' + e, 'error');
+            logger.log("Error parsing JSON from completion", "error");
+            logger.log("Error: " + e, "error");
         }
         return classification;
     }
 
     async classifyBook_IndexSuggest(book: Book, classes: string[]) {
-        const message = exampleText3 + book.title + ' by ' + book.authors.split(';').join(', ') + '\n\nOptions:\n\n' + classes.join('\n') + '\n\n' + exampleText4.replace('xxxxx', classes[0]);
+        const message =
+            exampleText3 +
+            book.title +
+            " by " +
+            book.authors.split(";").join(", ") +
+            "\n\nOptions:\n\n" +
+            classes.join("\n") +
+            "\n\n" +
+            exampleText4.replace("xxxxx", classes[0]);
         const chatCompletion = await AI.client.chat.completions.create({
-            messages: [{ role: 'user', content: message }],
+            messages: [{ role: "user", content: message }],
             model: process.env.GPT_MODEL as string,
         });
-        logger.log(chatCompletion.choices[0].message.content as string, 'info');
+        logger.log(chatCompletion.choices[0].message.content as string, "info");
 
         // extract the JSON from the completion
         const mes = chatCompletion.choices[0].message.content as string;
         let classification = {} as any;
         try {
-            classification = JSON.parse(mes.substring(mes.indexOf('{'), mes.lastIndexOf('}') + 1));
+            classification = JSON.parse(
+                mes.substring(mes.indexOf("{"), mes.lastIndexOf("}") + 1)
+            );
         } catch (e) {
-            logger.log('Error parsing JSON from completion', 'error');
-            logger.log('Error: ' + e, 'error');
+            logger.log("Error parsing JSON from completion", "error");
+            logger.log("Error: " + e, "error");
         }
         return classification;
     }
